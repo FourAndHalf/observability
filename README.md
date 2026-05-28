@@ -428,6 +428,18 @@ Restore from a local backup:
 ./scripts/restore-local.sh ./backups/YYYYMMDDTHHMMSSZ
 ```
 
+Restore the latest backup from S3 back onto the EBS-backed local directories:
+
+```sh
+./scripts/restore-s3.sh
+```
+
+Restore a specific backup folder from S3:
+
+```sh
+./scripts/restore-s3.sh YYYYMMDDTHHMMSSZ
+```
+
 The restore process:
 
 1. Stops Collector, Phoenix, and OpenObserve.

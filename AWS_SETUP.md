@@ -88,3 +88,7 @@ This guide outlines the infrastructure and configuration steps required to host 
         ```bash
         ./scripts/backup-s3.sh
         ```
+    7.  Restore from S3 back to the EBS-backed local data directories when needed:
+        ```bash
+        ./scripts/restore-s3.sh
+        ```
