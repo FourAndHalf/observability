@@ -250,6 +250,7 @@ OpenObserve has its own login controlled by:
 ```env
 OPENOBSERVE_ROOT_EMAIL
 OPENOBSERVE_ROOT_PASSWORD
+OPENOBSERVE_RETENTION_DAYS
 ```
 
 Phoenix auth is enabled with:
@@ -258,6 +259,7 @@ Phoenix auth is enabled with:
 PHOENIX_ENABLE_AUTH=True
 PHOENIX_SECRET
 PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD
+PHOENIX_RETENTION_DAYS
 ```
 
 After the first Phoenix startup, changing `PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD` does not reset the admin password. Change it inside Phoenix or follow Phoenix admin password reset procedures.
@@ -325,6 +327,17 @@ Caddy stores TLS certificates under:
 ```
 
 Do not delete `./data` unless you are intentionally resetting the stack.
+
+## Retention
+
+The stack defaults to a 30-day retention cap for both systems:
+
+```env
+OPENOBSERVE_RETENTION_DAYS=30
+PHOENIX_RETENTION_DAYS=30
+```
+
+OpenObserve uses its compaction retention policy to delete older stream data. Phoenix uses its default project retention policy so new projects inherit the 30-day cap unless you override them in the UI.
 
 ## Backups
 
