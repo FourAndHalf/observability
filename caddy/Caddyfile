@@ -13,3 +13,31 @@
 {$OTEL_SITE} {
 	reverse_proxy otel-collector:4318
 }
+
+aether-rag-pipeline.duckdns.org {
+    # Serve Jenkins
+    handle_path /jenkins* {
+        reverse_proxy rag-jenkins:8080
+    }
+
+    # API Routes (v1, healthz, pdfs)
+    handle /v1/* {
+        reverse_proxy rag-go-api:8080
+    }
+    handle /healthz {
+        reverse_proxy rag-go-api:8080
+    }
+    handle /pdfs/* {
+        reverse_proxy rag-go-api:8080
+    }
+
+    # All other requests go to the Angular UI
+    handle {
+        reverse_proxy rag-angular-ui:80
+    }
+
+    # Log requests
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
