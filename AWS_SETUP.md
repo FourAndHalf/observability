@@ -60,14 +60,14 @@ This guide outlines the infrastructure and configuration steps required to host 
         *   Set size to at least **20GB** (OpenObserve and Postgres data will live here).
     3.  Select the Security Group created in Step 3.
 
-## 5. Configure DNS (Route 53)
+## 5. Configure DNS (Route 53 or DuckDNS)
 *   **Project:** DNS Records.
 *   **Steps:**
-    1.  Go to Route 53 or your DNS provider.
-    2.  Create three **A Records** pointing to your EC2 Public IP:
-        *   `openobserve.yourdomain.com`
-        *   `phoenix.yourdomain.com`
-        *   `otel.yourdomain.com`
+    1.  Go to your DNS provider (DuckDNS).
+    2.  Create/Update three **A Records** (or subdomains) pointing to your EC2 Public IP:
+        *   `openobserve.observability.duckdns.org`
+        *   `phoenix.observability.duckdns.org`
+        *   `otel.observability.duckdns.org`
 
 ## 6. Server Initialization
 *   **Steps:**

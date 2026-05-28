@@ -33,13 +33,13 @@ Default exposed endpoints:
 
 | Purpose | Endpoint |
 | --- | --- |
-| OpenObserve UI | `https://openobserve.example.com` |
-| Phoenix UI | `https://phoenix.example.com` |
-| OTLP HTTP ingest | `https://otel.example.com` |
+| OpenObserve UI | `https://openobserve.observability.duckdns.org` |
+| Phoenix UI | `https://phoenix.observability.duckdns.org` |
+| OTLP HTTP ingest | `https://otel.observability.duckdns.org` |
 | Raw OTLP HTTP ingest | `http://host:4318` |
 | Raw OTLP gRPC ingest | `http://host:4317`, bound to localhost by default |
 
-For production and EC2, prefer `https://otel.example.com` over raw `4318`.
+For production and EC2, prefer `https://otel.observability.duckdns.org` over raw `4318`.
 
 ## Files
 
@@ -52,6 +52,8 @@ For production and EC2, prefer `https://otel.example.com` over raw `4318`.
 | `scripts/backup-local.sh` | Creates local backups of OpenObserve data, Phoenix PostgreSQL, config, and `.env`. |
 | `scripts/backup-s3.sh` | Creates a local backup, then syncs it to S3 with server-side encryption. |
 | `scripts/restore-local.sh` | Restores OpenObserve data and Phoenix PostgreSQL from a local backup folder. |
+| `USER_MANAGEMENT.md` | Guide for creating and managing users in OpenObserve and Phoenix. |
+| `AWS_SETUP.md` | Infrastructure and configuration steps for AWS deployment. |
 
 ## Initial Setup
 
@@ -187,9 +189,9 @@ Recommended EC2 shape for a small team:
 DNS should point these names to the EC2 public IP or load balancer:
 
 ```text
-openobserve.example.com
-phoenix.example.com
-otel.example.com
+openobserve.observability.duckdns.org
+phoenix.observability.duckdns.org
+otel.observability.duckdns.org
 ```
 
 Caddy will request TLS certificates automatically when the domains resolve correctly and ports 80/443 are reachable.
@@ -203,7 +205,7 @@ For OTLP HTTP:
 ```env
 OTEL_SERVICE_NAME=my-service
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-OTEL_EXPORTER_OTLP_ENDPOINT=https://otel.example.com
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel.observability.duckdns.org
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic base64_of_otel_ingest_colon_password
 OTEL_TRACES_EXPORTER=otlp
 OTEL_METRICS_EXPORTER=otlp
@@ -261,6 +263,8 @@ PHOENIX_SECRET
 PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD
 PHOENIX_RETENTION_DAYS
 ```
+
+For detailed instructions on adding more users, see [USER_MANAGEMENT.md](./USER_MANAGEMENT.md).
 
 After the first Phoenix startup, changing `PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD` does not reset the admin password. Change it inside Phoenix or follow Phoenix admin password reset procedures.
 
