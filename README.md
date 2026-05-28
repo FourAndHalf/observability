@@ -264,7 +264,7 @@ PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD
 PHOENIX_RETENTION_DAYS
 ```
 
-For detailed instructions on adding more users, see [USER_MANAGEMENT.md](./USER_MANAGEMENT.md).
+For detailed instructions on adding more users, see [USER_MANAGEMENT.md](./docs/USER_MANAGEMENT.md).
 
 After the first Phoenix startup, changing `PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD` does not reset the admin password. Change it inside Phoenix or follow Phoenix admin password reset procedures.
 
