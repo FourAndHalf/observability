@@ -1,0 +1,108 @@
+services:
+  openobserve:
+    image: openobserve/openobserve:latest
+    container_name: observability-openobserve
+    restart: unless-stopped
+    environment:
+      ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_ROOT_EMAIL}
+      ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_ROOT_PASSWORD}
+      ZO_DATA_DIR: /data
+      ZO_LOCAL_MODE: "true"
+      ZO_TRACING_ENABLED: "true"
+      ZO_TRACING_SEARCH_ENABLED: "true"
+    volumes:
+      - ./data/openobserve:/data
+    expose:
+      - "5080"
+    networks:
+      - observability
+
+  phoenix-postgres:
+    image: postgres:16-alpine
+    container_name: observability-phoenix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PHOENIX_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PHOENIX_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${PHOENIX_POSTGRES_DB}
+    volumes:
+      - ./data/phoenix-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PHOENIX_POSTGRES_USER} -d ${PHOENIX_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - observability
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: observability-phoenix
+    restart: unless-stopped
+    depends_on:
+      phoenix-postgres:
+        condition: service_healthy
+    environment:
+      PHOENIX_HOST: 0.0.0.0
+      PHOENIX_PORT: 6006
+      PHOENIX_GRPC_PORT: 4317
+      PHOENIX_SQL_DATABASE_URL: postgresql://${PHOENIX_POSTGRES_USER}:${PHOENIX_POSTGRES_PASSWORD}@phoenix-postgres:5432/${PHOENIX_POSTGRES_DB}
+      PHOENIX_ENABLE_AUTH: "True"
+      PHOENIX_SECRET: ${PHOENIX_SECRET}
+      PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD}
+      PHOENIX_ALLOW_EXTERNAL_RESOURCES: "false"
+    expose:
+      - "6006"
+      - "4317"
+    networks:
+      - observability
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: observability-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    depends_on:
+      - openobserve
+      - phoenix
+    environment:
+      OTEL_COLLECTOR_HTPASSWD: ${OTEL_COLLECTOR_HTPASSWD}
+      OPENOBSERVE_ORG: ${OPENOBSERVE_ORG}
+      OPENOBSERVE_AUTH_HEADER: ${OPENOBSERVE_AUTH_HEADER}
+      OPENOBSERVE_LOG_STREAM: ${OPENOBSERVE_LOG_STREAM}
+      OPENOBSERVE_TRACE_STREAM: ${OPENOBSERVE_TRACE_STREAM}
+      PHOENIX_API_KEY: ${PHOENIX_API_KEY}
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "${OTEL_GRPC_BIND:-127.0.0.1}:4317:4317"
+      - "${OTEL_HTTP_BIND:-0.0.0.0}:4318:4318"
+    networks:
+      - observability
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: observability-caddy
+    restart: unless-stopped
+    depends_on:
+      - openobserve
+      - phoenix
+      - otel-collector
+    environment:
+      OPENOBSERVE_SITE: ${OPENOBSERVE_SITE}
+      PHOENIX_SITE: ${PHOENIX_SITE}
+      OTEL_SITE: ${OTEL_SITE}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
+    ports:
+      - "${HTTP_BIND:-80}:80"
+      - "${HTTPS_BIND:-443}:443"
+    networks:
+      - observability
+
+networks:
+  observability:
+    name: observability

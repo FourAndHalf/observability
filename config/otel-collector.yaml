@@ -1,0 +1,111 @@
+extensions:
+  basicauth/ingest:
+    htpasswd:
+      inline: ${env:OTEL_COLLECTOR_HTPASSWD}
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        auth:
+          authenticator: basicauth/ingest
+      http:
+        endpoint: 0.0.0.0:4318
+        auth:
+          authenticator: basicauth/ingest
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "https://localhost:*"
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 512
+    spike_limit_mib: 128
+  resource/defaults:
+    attributes:
+      - key: deployment.environment
+        action: insert
+        value: self-hosted
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+exporters:
+  otlphttp/openobserve_traces:
+    endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
+    headers:
+      Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+      stream-name: ${env:OPENOBSERVE_TRACE_STREAM}
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  otlphttp/openobserve_logs:
+    endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
+    headers:
+      Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+      stream-name: ${env:OPENOBSERVE_LOG_STREAM}
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  otlphttp/openobserve_metrics:
+    endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
+    headers:
+      Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+    sending_queue:
+      enabled: true
+      queue_size: 5000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  otlphttp/phoenix:
+    traces_endpoint: http://phoenix:6006/v1/traces
+    headers:
+      authorization: Bearer ${env:PHOENIX_API_KEY}
+    sending_queue:
+      enabled: true
+      queue_size: 2000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  debug:
+    verbosity: basic
+
+service:
+  extensions: [basicauth/ingest]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/defaults, batch]
+      exporters: [otlphttp/openobserve_traces, otlphttp/phoenix]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/defaults, batch]
+      exporters: [otlphttp/openobserve_metrics]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/defaults, batch]
+      exporters: [otlphttp/openobserve_logs]

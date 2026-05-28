@@ -1,0 +1,15 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$OPENOBSERVE_SITE} {
+	reverse_proxy openobserve:5080
+}
+
+{$PHOENIX_SITE} {
+	reverse_proxy phoenix:6006
+}
+
+{$OTEL_SITE} {
+	reverse_proxy otel-collector:4318
+}
