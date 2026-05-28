@@ -8,8 +8,6 @@ services:
       ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_ROOT_PASSWORD}
       ZO_DATA_DIR: /data
       ZO_LOCAL_MODE: "true"
-      ZO_TRACING_ENABLED: "true"
-      ZO_TRACING_SEARCH_ENABLED: "true"
     volumes:
       - ./data/openobserve:/data
     expose:

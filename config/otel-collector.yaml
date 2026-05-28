@@ -34,7 +34,7 @@ processors:
     send_batch_size: 1024
 
 exporters:
-  otlphttp/openobserve_traces:
+  otlp_http/openobserve_traces:
     endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
     headers:
       Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
@@ -48,7 +48,7 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 300s
 
-  otlphttp/openobserve_logs:
+  otlp_http/openobserve_logs:
     endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
     headers:
       Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
@@ -62,7 +62,7 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 300s
 
-  otlphttp/openobserve_metrics:
+  otlp_http/openobserve_metrics:
     endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
     headers:
       Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
@@ -75,7 +75,7 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 300s
 
-  otlphttp/phoenix:
+  otlp_http/phoenix:
     traces_endpoint: http://phoenix:6006/v1/traces
     headers:
       authorization: Bearer ${env:PHOENIX_API_KEY}
@@ -100,12 +100,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource/defaults, batch]
-      exporters: [otlphttp/openobserve_traces, otlphttp/phoenix]
+      exporters: [otlp_http/openobserve_traces, otlp_http/phoenix]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, resource/defaults, batch]
-      exporters: [otlphttp/openobserve_metrics]
+      exporters: [otlp_http/openobserve_metrics]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, resource/defaults, batch]
-      exporters: [otlphttp/openobserve_logs]
+      exporters: [otlp_http/openobserve_logs]

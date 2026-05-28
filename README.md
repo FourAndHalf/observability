@@ -158,12 +158,14 @@ For local-only development without DNS:
 4. Use these local endpoints:
 
    ```text
-   OpenObserve: http://openobserve.local
-   Phoenix: http://phoenix.local
-   Collector HTTP: http://otel.local
+   OpenObserve: http://openobserve.local:8080
+   Phoenix: http://phoenix.local:8080
+   Collector HTTP: http://otel.local:8080
    Collector HTTP: http://localhost:4318
    Collector gRPC: http://localhost:4317
    ```
+
+For EC2 production, set `HTTP_BIND=80` and `HTTPS_BIND=443`.
 
 The Compose file intentionally does not expose OpenObserve or Phoenix directly. Caddy is the browser entry point. If you want raw local UI ports during development, temporarily add `ports` to the relevant services.
 
