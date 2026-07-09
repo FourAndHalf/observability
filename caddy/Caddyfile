@@ -1,43 +1,36 @@
 {
-	email {$ACME_EMAIL}
+	auto_https off
 }
 
-{$OPENOBSERVE_SITE} {
-	reverse_proxy openobserve:5080
-}
+:80 {
+	# Redirect no-trailing-slash requests so they don't fall through to the root handler
+	redir /phoenix /phoenix/ 308
+	redir /openobserve /openobserve/ 308
 
-{$PHOENIX_SITE} {
-	reverse_proxy phoenix:6006
-}
+	# OTLP HTTP ingest (standard collector paths, no prefix stripping)
+	handle /v1/traces {
+		reverse_proxy otel-collector:4318
+	}
+	handle /v1/metrics {
+		reverse_proxy otel-collector:4318
+	}
+	handle /v1/logs {
+		reverse_proxy otel-collector:4318
+	}
 
-{$OTEL_SITE} {
-	reverse_proxy otel-collector:4318
-}
+	# Phoenix UI/API. PHOENIX_HOST_ROOT_PATH makes it emit /phoenix-prefixed links,
+	# but its static asset server only serves them unprefixed, so strip here.
+	handle_path /phoenix/* {
+		reverse_proxy phoenix:6006
+	}
 
-aether-rag-pipeline.duckdns.org {
-    # Serve Jenkins
-    handle_path /jenkins* {
-        reverse_proxy rag-jenkins:8080
-    }
+	# OpenObserve UI/API, kept under /openobserve (ZO_BASE_URI matches)
+	handle /openobserve/* {
+		reverse_proxy openobserve:5080
+	}
 
-    # API Routes (v1, healthz, pdfs)
-    handle /v1/* {
-        reverse_proxy rag-go-api:8080
-    }
-    handle /healthz {
-        reverse_proxy rag-go-api:8080
-    }
-    handle /pdfs/* {
-        reverse_proxy rag-go-api:8080
-    }
-
-    # All other requests go to the Angular UI
-    handle {
-        reverse_proxy rag-angular-ui:80
-    }
-
-    # Log requests
-    log {
-        output file /var/log/caddy/access.log
-    }
+	# OTLP collector at the root
+	handle {
+		reverse_proxy otel-collector:4318
+	}
 }

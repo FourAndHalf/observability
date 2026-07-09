@@ -66,6 +66,7 @@ exporters:
     endpoint: http://openobserve:5080/api/${env:OPENOBSERVE_ORG}
     headers:
       Authorization: ${env:OPENOBSERVE_AUTH_HEADER}
+      stream-name: ${env:OPENOBSERVE_METRIC_STREAM}
     sending_queue:
       enabled: true
       queue_size: 5000
@@ -91,16 +92,31 @@ exporters:
   debug:
     verbosity: basic
 
+connectors:
+  routing/traces:
+    error_mode: ignore
+    default_pipelines: [traces/openobserve]
+    table:
+      - context: span
+        condition: attributes["openinference.span.kind"] != nil
+        pipelines: [traces/phoenix]
+
 service:
   extensions: [basicauth/ingest]
   telemetry:
     logs:
       level: info
   pipelines:
-    traces:
+    traces/in:
       receivers: [otlp]
       processors: [memory_limiter, resource/defaults, batch]
-      exporters: [otlp_http/openobserve_traces, otlp_http/phoenix]
+      exporters: [routing/traces]
+    traces/phoenix:
+      receivers: [routing/traces]
+      exporters: [otlp_http/phoenix]
+    traces/openobserve:
+      receivers: [routing/traces]
+      exporters: [otlp_http/openobserve_traces]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, resource/defaults, batch]

@@ -9,6 +9,7 @@ services:
       ZO_DATA_DIR: /data
       ZO_LOCAL_MODE: "true"
       ZO_COMPACT_DATA_RETENTION_DAYS: ${OPENOBSERVE_RETENTION_DAYS}
+      ZO_BASE_URI: /openobserve
     volumes:
       - ./data/openobserve:/data
     expose:
@@ -51,6 +52,8 @@ services:
       PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD: ${PHOENIX_DEFAULT_ADMIN_INITIAL_PASSWORD}
       PHOENIX_DEFAULT_RETENTION_POLICY_DAYS: ${PHOENIX_RETENTION_DAYS}
       PHOENIX_ALLOW_EXTERNAL_RESOURCES: "false"
+      PHOENIX_HOST_ROOT_PATH: /phoenix
+      PHOENIX_ROOT_URL: https://${PUBLIC_DOMAIN}/phoenix
     expose:
       - "6006"
       - "4317"
@@ -89,9 +92,7 @@ services:
       - phoenix
       - otel-collector
     environment:
-      OPENOBSERVE_SITE: ${OPENOBSERVE_SITE}
-      PHOENIX_SITE: ${PHOENIX_SITE}
-      OTEL_SITE: ${OTEL_SITE}
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -102,6 +103,16 @@ services:
       - "${HTTPS_BIND:-443}:443"
     networks:
       - observability
+
+  duckdns:
+    image: linuxserver/duckdns:latest
+    container_name: observability-duckdns
+    restart: unless-stopped
+    environment:
+      TZ: Etc/UTC
+      SUBDOMAINS: ${DUCKDNS_SUBDOMAIN}
+      TOKEN: ${DUCKDNS_TOKEN}
+      UPDATE_IP: ipv4
 
 networks:
   observability:

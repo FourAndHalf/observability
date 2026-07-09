@@ -29,17 +29,17 @@ Browser users
       -> Phoenix UI
 ```
 
-Default exposed endpoints:
+Default exposed endpoints (DuckDNS gives one hostname, so Caddy routes by path):
 
 | Purpose | Endpoint |
 | --- | --- |
-| OpenObserve UI | `https://openobserve.observability.duckdns.org` |
-| Phoenix UI | `https://phoenix.observability.duckdns.org` |
-| OTLP HTTP ingest | `https://otel.observability.duckdns.org` |
-| Raw OTLP HTTP ingest | `http://host:4318` |
+| OpenObserve UI | `https://observability.duckdns.org/` |
+| Phoenix UI | `https://observability.duckdns.org/phoenix` |
+| OTLP HTTP ingest | `https://observability.duckdns.org/v1/traces`, `/v1/metrics`, `/v1/logs` |
+| Raw OTLP HTTP ingest | `http://host:4318`, bound to localhost by default |
 | Raw OTLP gRPC ingest | `http://host:4317`, bound to localhost by default |
 
-For production and EC2, prefer `https://otel.observability.duckdns.org` over raw `4318`.
+For production, always send telemetry to the `https://observability.duckdns.org/v1/*` paths through Caddy, not raw `4318`.
 
 ## Files
 
@@ -133,68 +133,78 @@ Until `PHOENIX_API_KEY` is set, OpenObserve can receive traces, logs, and metric
 
 For local-only development without DNS:
 
-1. Set these in `.env`:
+1. Set this in `.env`:
 
    ```env
-   OPENOBSERVE_SITE=http://openobserve.local
-   PHOENIX_SITE=http://phoenix.local
-   OTEL_SITE=http://otel.local
+   PUBLIC_DOMAIN=observability.local:8080
    ```
 
-2. Add these to `/etc/hosts` on this machine:
+2. Add this to `/etc/hosts` on this machine:
 
    ```text
-   127.0.0.1 openobserve.local
-   127.0.0.1 phoenix.local
-   127.0.0.1 otel.local
+   127.0.0.1 observability.local
    ```
 
-3. For other devices on the LAN, add the same names to their hosts files, but point them to this machine's LAN IP:
+3. For other devices on the LAN, add the same name to their hosts files, but point it to this machine's LAN IP:
 
    ```text
-   192.168.x.x openobserve.local
-   192.168.x.x phoenix.local
-   192.168.x.x otel.local
+   192.168.x.x observability.local
    ```
 
 4. Use these local endpoints:
 
    ```text
-   OpenObserve: http://openobserve.local:8080
-   Phoenix: http://phoenix.local:8080
-   Collector HTTP: http://otel.local:8080
+   OpenObserve: http://observability.local:8080
+   Phoenix: http://observability.local:8080/phoenix
+   Collector HTTP: http://observability.local:8080/v1/traces
    Collector HTTP: http://localhost:4318
    Collector gRPC: http://localhost:4317
    ```
 
-For EC2 production, set `HTTP_BIND=80` and `HTTPS_BIND=443`.
+For a public deployment, set `HTTP_BIND=80` and `HTTPS_BIND=443`.
 
 The Compose file intentionally does not expose OpenObserve or Phoenix directly. Caddy is the browser entry point. If you want raw local UI ports during development, temporarily add `ports` to the relevant services.
 
-## EC2 Deployment
+## Hosting This on a Home Laptop Behind DuckDNS
 
-Recommended EC2 shape for a small team:
+This stack is designed to run on a machine you keep at home (e.g. a laptop) while remote services, such as an app on AWS, send telemetry to it over the internet.
+
+1. Register `observability` at [duckdns.org](https://www.duckdns.org) and copy your token.
+
+2. In `.env`, set:
+
+   ```env
+   PUBLIC_DOMAIN=observability.duckdns.org
+   ACME_EMAIL=you@example.com
+   HTTP_BIND=80
+   HTTPS_BIND=443
+   DUCKDNS_SUBDOMAIN=observability
+   DUCKDNS_TOKEN=your-duckdns-token
+   ```
+
+3. On your home router, forward external ports `80/tcp` and `443/tcp` to this machine's LAN IP. These are the only ports that need to be reachable from the internet.
+
+4. Run `docker compose up -d`. The `duckdns` service keeps `observability.duckdns.org` pointed at your current public IP (important on a residential connection where the IP can change), and Caddy requests a Let's Encrypt certificate for that hostname automatically once DNS resolves and ports 80/443 are reachable from the internet.
+
+5. From the AWS side, point the app's OTLP exporter at `https://observability.duckdns.org` (see "Sending Telemetry From Projects" below). No inbound rule is needed on the AWS side — it's an outbound-only connection to your home IP.
+
+## Public Server Deployment (EC2 or similar)
+
+Recommended shape for a small team:
 
 - Ubuntu LTS.
 - Docker Engine and Docker Compose plugin.
 - At least 2 vCPU, 4 GB RAM for light use.
 - 8 GB RAM or more if you ingest many logs/traces.
-- EBS gp3 volume mounted where this repo lives.
-- Security group allowing:
+- A persistent volume mounted where this repo lives.
+- Firewall/security group allowing:
   - `22/tcp` from your IP only.
   - `80/tcp` and `443/tcp` from users/apps that need access.
-  - Do not expose `5080`, `6006`, `5432`, or raw `4317` publicly.
-  - Expose raw `4318` only if you cannot use Caddy/TLS.
+  - Do not expose `5080`, `6006`, `5432`, or raw `4317`/`4318` publicly.
 
-DNS should point these names to the EC2 public IP or load balancer:
+DNS (or DuckDNS, as above) should point `observability.duckdns.org` at this host's public IP.
 
-```text
-openobserve.observability.duckdns.org
-phoenix.observability.duckdns.org
-otel.observability.duckdns.org
-```
-
-Caddy will request TLS certificates automatically when the domains resolve correctly and ports 80/443 are reachable.
+Caddy will request a TLS certificate automatically once the domain resolves correctly and ports 80/443 are reachable.
 
 ## Sending Telemetry From Projects
 
@@ -205,7 +215,7 @@ For OTLP HTTP:
 ```env
 OTEL_SERVICE_NAME=my-service
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-OTEL_EXPORTER_OTLP_ENDPOINT=https://otel.observability.duckdns.org
+OTEL_EXPORTER_OTLP_ENDPOINT=https://observability.duckdns.org
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic base64_of_otel_ingest_colon_password
 OTEL_TRACES_EXPORTER=otlp
 OTEL_METRICS_EXPORTER=otlp
